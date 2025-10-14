@@ -1,0 +1,30 @@
+?start: exp
+
+// Addition and Subtraction (lowest precedence)
+?exp: exp "+" exp1            -> plus
+    | exp "-" exp1            -> minus
+    | exp1
+
+// Multiplication (medium-low precedence)  
+?exp1: exp1 "*" exp2          -> times
+     | exp2
+
+// Unary minus (medium precedence - lower than exponents)
+?exp2: "-" exp2               -> neg
+     | exp3
+
+// Logarithms (medium-high precedence)
+?exp3: "log" exp4 "base" exp4 -> log_base
+     | exp4
+
+// Exponents (right-associative, highest precedence for operators)
+?exp4: exp5 "^" exp4          -> power
+     | exp5
+
+// Parentheses and Numbers (highest precedence)
+?exp5: NUMBER                 -> num
+     | "(" exp ")"
+
+%import common.NUMBER
+%import common.WS
+%ignore WS

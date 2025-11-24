@@ -1,0 +1,25 @@
+// Lambda calculus grammar for (\x.x) a etc.
+
+start: expr
+
+?expr: application
+     | abstraction
+
+// Lambda abstraction: \x. expr
+abstraction: LAMBDA NAME "." expr   -> lam
+
+// Left-associative application: ((e1 e2) e3) ...
+?application: application atom      -> app
+            | atom
+
+// Variables and parenthesized expressions
+?atom: NAME                         -> var
+     | "(" expr ")"
+
+// Tokens
+LAMBDA: "\\" | "λ"
+NAME: /[a-z][a-zA-Z0-9_]*/
+
+// Ignore whitespace
+%import common.WS
+%ignore WS

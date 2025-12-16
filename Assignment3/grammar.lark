@@ -1,0 +1,43 @@
+// Lambda calculus with arithmetic
+// Grammar for Milestone 1: lambda + numbers + arithmetic operations
+
+start: expr
+
+// Expressions with proper precedence
+?expr: abstraction
+     | addition
+
+// Lambda abstraction: \x. expr (lowest precedence, right associative)
+abstraction: LAMBDA NAME "." expr   -> lam
+
+// Addition and subtraction (left associative)
+?addition: addition "+" multiplication   -> plus
+         | addition "-" multiplication   -> minus
+         | multiplication
+
+// Multiplication (left associative, higher precedence than +/-)
+?multiplication: multiplication "*" unary   -> times
+               | unary
+
+// Unary negation (higher precedence than binary operators)
+?unary: "-" unary                    -> neg
+      | application
+
+// Application (highest precedence, left associative)
+?application: application atom       -> app
+            | atom
+
+// Atoms: variables, numbers, parenthesized expressions
+?atom: NAME                          -> var
+     | NUMBER                        -> num
+     | "(" expr ")"
+
+// Tokens
+LAMBDA: "\\" | "λ"
+NAME: /[a-z][a-zA-Z0-9_]*/
+NUMBER: /[0-9]+(\.[0-9]+)?/
+
+// Comments and whitespace
+%import common.WS
+%ignore WS
+%ignore /\/\/[^\n]*/     // single-line comments starting with //

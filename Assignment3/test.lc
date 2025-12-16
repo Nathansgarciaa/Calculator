@@ -1,0 +1,22 @@
+// Test cases for Lambda Calculus with Arithmetic (Milestone 1)
+
+// Identity function applied to arithmetic
+(\x.x) (1--2)
+
+// Lambda with addition
+(\x.x + 1) 5
+
+// Lambda with multiplication  
+(\x.x * x) 3
+
+// Multi-argument lambda
+(\x.\y.x + y) 3 4
+
+// Precedence test: multiplication before subtraction
+1-2*3-4
+
+// Application precedence higher than multiplication
+(\x.x * x) 2 * 3
+
+// Church numeral style - function composition
+(\f.\x.f (f x)) (\n.n + 1) 0

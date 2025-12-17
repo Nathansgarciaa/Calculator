@@ -86,4 +86,4 @@ Comprehensive test suite covering:
 
 ## Team
 
-Nathan Garcia
+Nathan Garcia and Kurt Lim 

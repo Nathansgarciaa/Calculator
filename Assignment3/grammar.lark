@@ -1,36 +1,68 @@
-// Lambda calculus with arithmetic
-// Grammar for Milestone 1: lambda + numbers + arithmetic operations
+// Lambda calculus with arithmetic, conditionals, let bindings, and lists
+// Grammar for Milestone 3
 
-start: expr
+start: prog
+
+// Sequencing (lowest precedence) - only at top level
+?prog: prog ";;" expr                        -> prog
+     | expr
 
 // Expressions with proper precedence
-?expr: abstraction
-     | addition
+?expr: let_expr
+     | if_expr
+     | abstraction
+     | cons_expr
 
-// Lambda abstraction: \x. expr (lowest precedence, right associative)
-abstraction: LAMBDA NAME "." expr   -> lam
+// Let and letrec
+?let_expr: "let" NAME "=" expr "in" expr      -> let_
+         | "letrec" NAME "=" expr "in" expr   -> rec
+
+// If-then-else
+?if_expr: "if" expr "then" expr "else" expr   -> if_
+
+// Lambda abstraction: \x. expr
+abstraction: LAMBDA NAME "." expr            -> lam
+
+// List destructors (lower precedence than cons)
+?cons_expr: "hd" cons_expr                   -> hd
+          | "tl" cons_expr                   -> tl
+          | comparison
+
+// Comparison operators (lower precedence than cons)
+?comparison: comparison "==" cons_list       -> eq
+           | comparison "<=" cons_list       -> leq
+           | cons_list
+
+// List cons (right associative, higher precedence than comparison)
+?cons_list: addition ":" cons_list           -> cons
+          | addition
 
 // Addition and subtraction (left associative)
-?addition: addition "+" multiplication   -> plus
-         | addition "-" multiplication   -> minus
+?addition: addition "+" multiplication       -> plus
+         | addition "-" multiplication       -> minus
          | multiplication
 
 // Multiplication (left associative, higher precedence than +/-)
-?multiplication: multiplication "*" unary   -> times
+?multiplication: multiplication "*" unary    -> times
                | unary
 
 // Unary negation (higher precedence than binary operators)
-?unary: "-" unary                    -> neg
-      | application
+?unary: "-" unary                            -> neg
+      | fix_expr
+
+// Fix point combinator
+?fix_expr: "fix" application                 -> fix
+         | application
 
 // Application (highest precedence, left associative)
-?application: application atom       -> app
+?application: application atom               -> app
             | atom
 
-// Atoms: variables, numbers, parenthesized expressions
-?atom: NAME                          -> var
-     | NUMBER                        -> num
-     | "(" expr ")"
+// Atoms: variables, numbers, nil, parenthesized expressions
+?atom: NAME                                  -> var
+     | NUMBER                                -> num
+     | "#"                                   -> nil
+     | "(" prog ")"
 
 // Tokens
 LAMBDA: "\\" | "λ"

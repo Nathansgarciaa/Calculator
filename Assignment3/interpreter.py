@@ -42,6 +42,50 @@ class LambdaCalculusTransformer(Transformer):
     def neg(self, args):
         return ('neg', args[0])
 
+    # Note: Python's 'if' and 'let' are keywords, so we use 'if_' and 'let_' in grammar
+    def if_(self, args):
+        # if cond then e1 else e2
+        return ('if', args[0], args[1], args[2])
+
+    def let_(self, args):
+        # let x = e1 in e2
+        name, e1, e2 = args
+        return ('let', str(name), e1, e2)
+
+    def rec(self, args):
+        # letrec f = e1 in e2
+        name, e1, e2 = args
+        return ('rec', str(name), e1, e2)
+
+    def leq(self, args):
+        return ('leq', *args)
+
+    def eq(self, args):
+        return ('eq', *args)
+
+    def fix(self, args):
+        return ('fix', args[0])
+
+    def prog(self, args):
+        # Sequential composition: e1 ;; e2
+        return ('prog', args[0], args[1])
+
+    def cons(self, args):
+        # List constructor: e1 : e2
+        return ('cons', args[0], args[1])
+
+    def nil(self, args):
+        # Empty list: #
+        return ('nil',)
+
+    def hd(self, args):
+        # Head of list: hd e
+        return ('hd', args[0])
+
+    def tl(self, args):
+        # Tail of list: tl e
+        return ('tl', args[0])
+
     def NAME(self, token):
         return str(token)
 
@@ -124,6 +168,80 @@ def substitute(tree, name, replacement):
     elif tag == 'neg':
         return ('neg', substitute(tree[1], name, replacement))
 
+    elif tag == 'if':
+        return (
+            'if',
+            substitute(tree[1], name, replacement),
+            substitute(tree[2], name, replacement),
+            substitute(tree[3], name, replacement),
+        )
+
+    elif tag == 'leq':
+        return (
+            'leq',
+            substitute(tree[1], name, replacement),
+            substitute(tree[2], name, replacement),
+        )
+
+    elif tag == 'eq':
+        return (
+            'eq',
+            substitute(tree[1], name, replacement),
+            substitute(tree[2], name, replacement),
+        )
+
+    elif tag == 'let':
+        # let x = e1 in e2 [r/n]
+        # ==> let x = e1[r/n] in e2[r/n]  (if x != n)
+        # ==> let x = e1[r/n] in e2        (if x == n, x shadows n)
+        bound = tree[1]
+        e1 = tree[2]
+        e2 = tree[3]
+        if bound == name:
+            return ('let', bound, substitute(e1, name, replacement), e2)
+        else:
+            fresh_name = name_generator.generate()
+            renamed_e2 = substitute(e2, bound, ('var', fresh_name))
+            return ('let', fresh_name, substitute(e1, name, replacement), substitute(renamed_e2, name, replacement))
+
+    elif tag == 'rec':
+        # letrec f = e1 in e2 [r/n]
+        bound = tree[1]
+        e1 = tree[2]
+        e2 = tree[3]
+        if bound == name:
+            return ('rec', bound, substitute(e1, name, replacement), e2)
+        else:
+            fresh_name = name_generator.generate()
+            renamed_e2 = substitute(e2, bound, ('var', fresh_name))
+            return ('rec', fresh_name, substitute(e1, name, replacement), substitute(renamed_e2, name, replacement))
+
+    elif tag == 'fix':
+        return ('fix', substitute(tree[1], name, replacement))
+
+    elif tag == 'prog':
+        return (
+            'prog',
+            substitute(tree[1], name, replacement),
+            substitute(tree[2], name, replacement),
+        )
+
+    elif tag == 'cons':
+        return (
+            'cons',
+            substitute(tree[1], name, replacement),
+            substitute(tree[2], name, replacement),
+        )
+
+    elif tag == 'nil':
+        return tree
+
+    elif tag == 'hd':
+        return ('hd', substitute(tree[1], name, replacement))
+
+    elif tag == 'tl':
+        return ('tl', substitute(tree[1], name, replacement))
+
     else:
         raise Exception('Unknown tree', tree)
 
@@ -184,6 +302,103 @@ def evaluate(tree):
             return ('num', -operand[1])
         return ('neg', operand)
 
+    if tag == 'if':
+        # if cond then e1 else e2
+        # if 1 then e1 else e2 --> e1
+        # if 0 then e1 else e2 --> e2
+        cond = evaluate(tree[1])
+        if cond[0] == 'num':
+            if cond[1] == 1.0:
+                return evaluate(tree[2])
+            elif cond[1] == 0.0:
+                return evaluate(tree[3])
+        return ('if', cond, tree[2], tree[3])
+
+    if tag == 'leq':
+        # <= (less or equal)
+        left = evaluate(tree[1])
+        right = evaluate(tree[2])
+        if left[0] == 'num' and right[0] == 'num':
+            # Return 1.0 for true, 0.0 for false
+            return ('num', 1.0 if left[1] <= right[1] else 0.0)
+        return ('leq', left, right)
+
+    if tag == 'eq':
+        # == (equality)
+        left = evaluate(tree[1])
+        right = evaluate(tree[2])
+        
+        # Helper function to check structural equality
+        def equal(a, b):
+            if a[0] != b[0]:
+                return False
+            if a[0] == 'num':
+                return a[1] == b[1]
+            elif a[0] == 'nil':
+                return True
+            elif a[0] == 'cons':
+                return equal(a[1], b[1]) and equal(a[2], b[2])
+            else:
+                # For other types, they're only equal if structurally identical
+                return a == b
+        
+        if left[0] in ('num', 'nil', 'cons') and right[0] in ('num', 'nil', 'cons'):
+            return ('num', 1.0 if equal(left, right) else 0.0)
+        return ('eq', left, right)
+
+    if tag == 'let':
+        # let x = e1 in e2  -->  (\x.e2) e1
+        name = tree[1]
+        e1 = tree[2]
+        e2 = tree[3]
+        # Desugar to lambda application
+        return evaluate(('app', ('lam', name, e2), e1))
+
+    if tag == 'rec':
+        # letrec f = e1 in e2  -->  let f = (fix (\f.e1)) in e2
+        name = tree[1]
+        e1 = tree[2]
+        e2 = tree[3]
+        # Desugar to let with fix
+        return evaluate(('let', name, ('fix', ('lam', name, e1)), e2))
+
+    if tag == 'fix':
+        # fix F  -->  F (fix F)
+        func = tree[1]
+        # Apply the function to (fix func)
+        return evaluate(('app', func, ('fix', func)))
+
+    if tag == 'prog':
+        # Sequential composition: evaluate both, return both
+        e1 = evaluate(tree[1])
+        e2 = evaluate(tree[2])
+        return ('prog', e1, e2)
+
+    if tag == 'cons':
+        # List constructor: don't evaluate (data constructor)
+        # But we do evaluate the parts for normalization
+        head = evaluate(tree[1])
+        tail = evaluate(tree[2])
+        return ('cons', head, tail)
+
+    if tag == 'nil':
+        # Empty list: already in normal form
+        return tree
+
+    if tag == 'hd':
+        # Head of list: hd (a:b) --> a
+        lst = evaluate(tree[1])
+        if lst[0] == 'cons':
+            return lst[1]  # Return the head
+        return ('hd', lst)
+
+    if tag == 'tl':
+        # Tail of list: tl (a:b) --> b
+        lst = evaluate(tree[1])
+        if lst[0] == 'cons':
+            return lst[2]  # Return the tail
+        return ('tl', lst)
+
     raise Exception('Unknown node', tree)
 
 
@@ -217,6 +432,39 @@ def linearize(ast):
 
     elif tag == 'neg':
         return "(-" + linearize(ast[1]) + ")"
+
+    elif tag == 'if':
+        return "(if " + linearize(ast[1]) + " then " + linearize(ast[2]) + " else " + linearize(ast[3]) + ")"
+
+    elif tag == 'leq':
+        return "(" + linearize(ast[1]) + " <= " + linearize(ast[2]) + ")"
+
+    elif tag == 'eq':
+        return "(" + linearize(ast[1]) + " == " + linearize(ast[2]) + ")"
+
+    elif tag == 'let':
+        return "(let " + ast[1] + " = " + linearize(ast[2]) + " in " + linearize(ast[3]) + ")"
+
+    elif tag == 'rec':
+        return "(letrec " + ast[1] + " = " + linearize(ast[2]) + " in " + linearize(ast[3]) + ")"
+
+    elif tag == 'fix':
+        return "(fix " + linearize(ast[1]) + ")"
+
+    elif tag == 'prog':
+        return linearize(ast[1]) + " ;; " + linearize(ast[2])
+
+    elif tag == 'cons':
+        return "(" + linearize(ast[1]) + " : " + linearize(ast[2]) + ")"
+
+    elif tag == 'nil':
+        return "#"
+
+    elif tag == 'hd':
+        return "(hd " + linearize(ast[1]) + ")"
+
+    elif tag == 'tl':
+        return "(tl " + linearize(ast[1]) + ")"
 
     else:
         return str(ast)

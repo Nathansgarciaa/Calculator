@@ -154,11 +154,131 @@ def test_additional_cases():
     print("\nAdditional test cases: All tests passed!\n")
 
 
+def test_milestone2():
+    """Test Milestone 2 features: conditionals, let, letrec"""
+    print("\n" + "="*60)
+    print("MILESTONE 2: CONDITIONALS, LET, LETREC")
+    print("="*60)
+    
+    # Conditionals
+    assert interpret("if 0 then 2 else 1") == "1.0"
+    print(f"{BLUE}if 0 then 2 else 1{RESET}  -->  1.0")
+    
+    assert interpret("if 1 then 2 else 2") == "2.0"
+    print(f"{BLUE}if 1 then 2 else 2{RESET}  -->  2.0")
+    
+    assert interpret("if 0 then 2 else if 1 then 3 else 4") == "3.0"
+    print(f"{BLUE}if 0 then 2 else if 1 then 3 else 4{RESET}  -->  3.0")
+    
+    assert interpret("if 0 then 2 else if 0 then 3 else 4") == "4.0"
+    print(f"{BLUE}if 0 then 2 else if 0 then 3 else 4{RESET}  -->  4.0")
+    
+    # Equality and comparison
+    assert interpret("if 0 == 0 then 5 else 6") == "5.0"
+    print(f"{BLUE}if 0 == 0 then 5 else 6{RESET}  -->  5.0")
+    
+    assert interpret("if 0 <= 1 then 6 else 7") == "6.0"
+    print(f"{BLUE}if 0 <= 1 then 6 else 7{RESET}  -->  6.0")
+    
+    assert interpret("if 1 <= 0 then 6 else 7") == "7.0"
+    print(f"{BLUE}if 1 <= 0 then 6 else 7{RESET}  -->  7.0")
+    
+    # Let bindings
+    assert interpret("let x = 1 in if x == 1 then 8 else 9") == "8.0"
+    print(f"{BLUE}let x = 1 in if x == 1 then 8 else 9{RESET}  -->  8.0")
+    
+    assert interpret("let x = 0 in if x == 1 then 8 else 9") == "9.0"
+    print(f"{BLUE}let x = 0 in if x == 1 then 8 else 9{RESET}  -->  9.0")
+    
+    assert interpret(r"let f = \x.x in f 10") == "10.0"
+    print(f"{BLUE}let f = \\x.x in f 10{RESET}  -->  10.0")
+    
+    assert interpret(r"let f = \x.x+1 in f 10") == "11.0"
+    print(f"{BLUE}let f = \\x.x+1 in f 10{RESET}  -->  11.0")
+    
+    assert interpret(r"let f = \x.x*6 in let g = \x.x+1 in f (g 1)") == "12.0"
+    print(f"{BLUE}let f = \\x.x*6 in let g = \\x.x+1 in f (g 1){RESET}  -->  12.0")
+    
+    assert interpret(r"let f = \x.x*6 in let g = \x.x+1 in g (f 2)") == "13.0"
+    print(f"{BLUE}let f = \\x.x*6 in let g = \\x.x+1 in g (f 2){RESET}  -->  13.0")
+    
+    assert interpret(r"let f = \x.x*6 in let f = \x.x+1 in f (f 2) + 10") == "14.0"
+    print(f"{BLUE}let f = \\x.x*6 in let f = \\x.x+1 in f (f 2) + 10{RESET}  -->  14.0")
+    
+    # Letrec - recursive functions
+    assert interpret(r"letrec f = \n. if n==0 then 1 else n*f(n-1) in f 4") == "24.0"
+    print(f"{BLUE}letrec f = \\n. if n==0 then 1 else n*f(n-1) in f 4{RESET}  -->  24.0  (factorial)")
+    
+    assert interpret(r"letrec f = \n. if n==0 then 0 else 1 + 2*(n-1) + f(n-1) in f 6") == "36.0"
+    print(f"{BLUE}letrec f = \\n. if n==0 then 0 else 1 + 2*(n-1) + f(n-1) in f 6{RESET}  -->  36.0")
+    
+    print("\nMilestone 2: All tests passed!\n")
+
+
+def test_milestone3():
+    """Test Milestone 3 features: sequencing and lists"""
+    print("\n" + "="*60)
+    print("MILESTONE 3: SEQUENCING AND LISTS")
+    print("="*60)
+    
+    # Basic tests
+    assert interpret("1") == "1.0"
+    print(f"{BLUE}1{RESET}  -->  1.0")
+    
+    # Sequencing
+    assert interpret("1 ;; 2") == "1.0 ;; 2.0"
+    print(f"{BLUE}1 ;; 2{RESET}  -->  1.0 ;; 2.0")
+    
+    assert interpret("1 ;; 2 ;; 3") == "1.0 ;; 2.0 ;; 3.0"
+    print(f"{BLUE}1 ;; 2 ;; 3{RESET}  -->  1.0 ;; 2.0 ;; 3.0")
+    
+    # Empty list
+    assert interpret("#") == "#"
+    print(f"{BLUE}#{RESET}  -->  #")
+    
+    # List construction
+    assert interpret("1:2:3:#") == "(1.0 : (2.0 : (3.0 : #)))"
+    print(f"{BLUE}1:2:3:#{RESET}  -->  (1.0 : (2.0 : (3.0 : #)))")
+    
+    # List operations with lambda
+    assert interpret(r"(\x.x) #") == "#"
+    print(f"{BLUE}(\\x.x) #{RESET}  -->  #")
+    
+    # List equality
+    assert interpret("1:2 == 1:2") == "1.0"
+    print(f"{BLUE}1:2 == 1:2{RESET}  -->  1.0")
+    
+    assert interpret("1:2 == 1:3") == "0.0"
+    print(f"{BLUE}1:2 == 1:3{RESET}  -->  0.0")
+    
+    # Head and tail
+    assert interpret("hd (1:2:#)") == "1.0"
+    print(f"{BLUE}hd (1:2:#{RESET})  -->  1.0")
+    
+    assert interpret("hd 1:2:#") == "1.0"
+    print(f"{BLUE}hd 1:2:#{RESET}  -->  1.0")
+    
+    assert interpret("tl (1:2:#)") == "(2.0 : #)"
+    print(f"{BLUE}tl (1:2:#{RESET})  -->  (2.0 : #)")
+    
+    assert interpret("tl 1:2:#") == "(2.0 : #)"
+    print(f"{BLUE}tl 1:2:#{RESET}  -->  (2.0 : #)")
+    
+    # Map function
+    result = interpret(r"letrec map = \f. \xs. if xs==# then # else (f (hd xs)) : (map f (tl xs)) in (map (\x.x+1) (1:2:3:#))")
+    assert result == "(2.0 : (3.0 : (4.0 : #)))"
+    print(f"{BLUE}letrec map = ... in map (\\x.x+1) (1:2:3:#{RESET})  -->  (2.0 : (3.0 : (4.0 : #)))")
+    
+    print("\nMilestone 3: All tests passed!\n")
+
+
 if __name__ == "__main__":
     test_lazy_evaluation()
     test_arithmetic()
     test_precedence()
     test_additional_cases()
+    test_milestone2()
+    test_milestone3()
     
     print("\n" + "="*60)
     print("ALL TESTS PASSED! ✓")
